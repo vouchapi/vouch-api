@@ -37,4 +37,4 @@ lerna-debug.log*
 
 .env
 
-src/temp
+/src/temp
