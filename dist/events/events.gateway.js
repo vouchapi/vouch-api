@@ -14,6 +14,7 @@ const _rxjs = require("rxjs");
 const _operators = require("rxjs/operators");
 const _socketio = require("socket.io");
 const _events = require("./events");
+const _logservice = require("../services/log/log.service");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -58,18 +59,50 @@ let EventsGateway = class EventsGateway {
     }
     handleProfileCreatedEvent(payload) {
         this.server.emit(_events.Events.ProfileCreated, payload);
+        for (const profile of payload.profiles){
+            this.postHog.track('PROFILE_REGISTERED', {
+                distinctId: profile.userId,
+                properties: {
+                    userId: profile.userId,
+                    username: profile.username
+                }
+            });
+        }
     }
     handleProfileUpdatedEvent(payload) {
         this.server.emit(_events.Events.ProfileUpdated, payload);
     }
     handleVouchCreatedEvent(payload) {
         this.server.emit(_events.Events.VouchCreated, payload);
+        this.postHog.track('VOUCH_POSTED', {
+            distinctId: payload.vouch.id.toString(),
+            properties: {
+                client: payload.vouch.client,
+                userId: payload.vouch.receiverId,
+                vouchId: payload.vouch.id
+            }
+        });
     }
     handleVouchUpdatedEvent(payload) {
         this.server.emit(_events.Events.VouchUpdated, payload);
+        const postPayload = {
+            distinctId: payload.newVouch.id.toString(),
+            properties: {
+                client: payload.newVouch.client,
+                userId: payload.newVouch.receiverId,
+                vouchId: payload.newVouch.id
+            }
+        };
+        if (payload.newVouch.vouchStatus === 'APPROVED' || payload.newVouch.vouchStatus === 'APPROVED_WITH_PROOF') {
+            this.postHog.track('VOUCH_APPROVE', postPayload);
+        } else if (payload.newVouch.vouchStatus === 'DENIED' || payload.newVouch.vouchStatus === 'DENIED_FOR_PROOF') {
+            this.postHog.track('VOUCH_DENIED', postPayload);
+        }
     }
-    constructor(){
+    constructor(postHog){
+        _define_property(this, "postHog", void 0);
         _define_property(this, "server", void 0);
+        this.postHog = postHog;
     }
 };
 _ts_decorate([
@@ -125,5 +158,9 @@ EventsGateway = _ts_decorate([
         cors: {
             origin: '*'
         }
-    })
+    }),
+    _ts_metadata("design:type", Function),
+    _ts_metadata("design:paramtypes", [
+        typeof _logservice.PostHogService === "undefined" ? Object : _logservice.PostHogService
+    ])
 ], EventsGateway);

@@ -13,7 +13,6 @@ const _discord = require("discord.js");
 const _constants = require("../constants");
 const _drizzlemodule = require("../drizzle/drizzle.module");
 const _schema = require("../drizzle/schema");
-const _bcrypt = /*#__PURE__*/ _interop_require_default(require("bcrypt"));
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -26,11 +25,6 @@ function _define_property(obj, key, value) {
         obj[key] = value;
     }
     return obj;
-}
-function _interop_require_default(obj) {
-    return obj && obj.__esModule ? obj : {
-        default: obj
-    };
 }
 function _ts_decorate(decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -61,12 +55,11 @@ let LicenseService = class LicenseService {
         }
         // size 24
         const secret = Math.random().toString(36).substring(2, 26);
-        const encryptedSecret = await _bcrypt.default.hash(secret, 10);
         const result = await this.db.insert(_schema.clientLicense).values([
             {
                 key,
                 client,
-                secret: encryptedSecret
+                secret
             }
         ]).returning();
         if (!result[0]) {
@@ -79,14 +72,18 @@ let LicenseService = class LicenseService {
         };
     }
     async validateLicense(key, secret) {
-        const starting = new Date();
         const license = this.cache.get(key);
         if (!license) {
-            return false;
+            return {
+                client: null,
+                valid: false
+            };
         }
-        const valid = await _bcrypt.default.compare(secret, license.secret);
-        console.log('Took:' + (new Date().getTime() - starting.getTime()));
-        return valid;
+        const valid = secret === license.secret;
+        return {
+            client: license.client,
+            valid
+        };
     }
     constructor(db){
         _define_property(this, "db", void 0);

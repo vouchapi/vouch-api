@@ -33,22 +33,17 @@ function _ts_metadata(k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 }
 let ClientAuthMiddleware = class ClientAuthMiddleware {
-    async use(req, res, next) {
+    async use(req, _, next) {
         const key = req.headers['x-client-key'];
         const secret = req.headers['x-client-secret'];
         if (!key || !secret) {
-            res.statusCode = 401;
-            res.setHeader('Content-Type', 'application/json');
-            res.end('Unauthorized');
-            return;
+            throw new _common.HttpException('Unauthorized', 401);
         }
-        const valid = await this.licenseService.validateLicense(key, secret);
-        if (!valid) {
-            res.statusCode = 401;
-            res.setHeader('Content-Type', 'application/json');
-            res.end('Unauthorized');
-            return;
+        const { valid, client } = await this.licenseService.validateLicense(key, secret);
+        if (!valid || !client) {
+            throw new _common.HttpException('Unauthorized', 401);
         }
+        req.client = client;
         next();
     }
     constructor(licenseService){

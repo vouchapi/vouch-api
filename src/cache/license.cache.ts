@@ -3,7 +3,6 @@ import { Collection } from 'discord.js';
 import { PG_CONNECTION } from '../constants';
 import { DbType } from '../drizzle/drizzle.module';
 import { clientLicense } from '../drizzle/schema';
-import bcrypt from 'bcrypt';
 
 export class LicenseService implements OnModuleInit {
   private cache = new Collection<string, typeof clientLicense.$inferSelect>();
@@ -27,7 +26,6 @@ export class LicenseService implements OnModuleInit {
 
     // size 24
     const secret = Math.random().toString(36).substring(2, 26);
-    const encryptedSecret = await bcrypt.hash(secret, 10);
 
     const result = await this.db
       .insert(clientLicense)
@@ -35,7 +33,7 @@ export class LicenseService implements OnModuleInit {
         {
           key,
           client,
-          secret: encryptedSecret
+          secret
         }
       ])
       .returning();
@@ -53,15 +51,18 @@ export class LicenseService implements OnModuleInit {
   }
 
   async validateLicense(key: string, secret: string) {
-    const starting = new Date();
     const license = this.cache.get(key);
     if (!license) {
-      return false;
+      return {
+        client: null,
+        valid: false
+      };
     }
 
-    const valid = await bcrypt.compare(secret, license.secret);
-
-    console.log('Took:' + (new Date().getTime() - starting.getTime()));
-    return valid;
+    const valid = secret === license.secret;
+    return {
+      client: license.client,
+      valid
+    };
   }
 }

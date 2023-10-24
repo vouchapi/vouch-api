@@ -9,8 +9,8 @@ import { VouchService } from './cache/vouch.cache';
 import { DbConfig } from './config';
 import { DrizzleModule } from './drizzle/drizzle.module';
 import { EventsModule } from './events/events.module';
-import { ClientAuthMiddleware } from './middleware/client.auth';
 import { AppAuthMiddleware } from './middleware/app.auth';
+import { ClientAuthMiddleware } from './middleware/client.auth';
 
 @Module({
   imports: [

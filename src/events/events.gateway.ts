@@ -16,6 +16,7 @@ import {
   VouchCreatedEvent,
   VouchUpdatedEvent
 } from './events';
+import { PostHogService } from '../services/log/log.service';
 
 @WebSocketGateway({
   cors: {
@@ -23,6 +24,8 @@ import {
   }
 })
 export class EventsGateway {
+  constructor(private readonly postHog: PostHogService) {}
+
   @WebSocketServer()
   server: Server;
 
@@ -42,6 +45,16 @@ export class EventsGateway {
   @OnEvent(Events.ProfileCreated)
   handleProfileCreatedEvent(payload: ProfileCreatedEvent) {
     this.server.emit(Events.ProfileCreated, payload);
+
+    for (const profile of payload.profiles) {
+      this.postHog.track('PROFILE_REGISTERED', {
+        distinctId: profile.userId,
+        properties: {
+          userId: profile.userId,
+          username: profile.username
+        }
+      });
+    }
   }
 
   @OnEvent(Events.ProfileUpdated)
@@ -52,10 +65,40 @@ export class EventsGateway {
   @OnEvent(Events.VouchCreated)
   handleVouchCreatedEvent(payload: VouchCreatedEvent) {
     this.server.emit(Events.VouchCreated, payload);
+
+    this.postHog.track('VOUCH_POSTED', {
+      distinctId: payload.vouch.id.toString(),
+      properties: {
+        client: payload.vouch.client,
+        userId: payload.vouch.receiverId,
+        vouchId: payload.vouch.id
+      }
+    });
   }
 
   @OnEvent(Events.VouchUpdated)
   handleVouchUpdatedEvent(payload: VouchUpdatedEvent) {
     this.server.emit(Events.VouchUpdated, payload);
+
+    const postPayload = {
+      distinctId: payload.newVouch.id.toString(),
+      properties: {
+        client: payload.newVouch.client,
+        userId: payload.newVouch.receiverId,
+        vouchId: payload.newVouch.id
+      }
+    };
+
+    if (
+      payload.newVouch.vouchStatus === 'APPROVED' ||
+      payload.newVouch.vouchStatus === 'APPROVED_WITH_PROOF'
+    ) {
+      this.postHog.track('VOUCH_APPROVE', postPayload);
+    } else if (
+      payload.newVouch.vouchStatus === 'DENIED' ||
+      payload.newVouch.vouchStatus === 'DENIED_FOR_PROOF'
+    ) {
+      this.postHog.track('VOUCH_DENIED', postPayload);
+    }
   }
 }

@@ -234,7 +234,7 @@ let ProfileService = class ProfileService {
         const results = allProfiles.filter((profile)=>{
             return profile.products.match(profileSearchRegex);
         });
-        return results.slice(0, 10);
+        return results.slice(0, 20);
     }
     constructor(db, eventEmitter){
         _define_property(this, "db", void 0);

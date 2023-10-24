@@ -13,6 +13,7 @@ const _profilecache = require("../../cache/profile.cache");
 const _schema = require("../../drizzle/schema");
 const _vouchcache = require("../../cache/vouch.cache");
 const _pgcore = require("drizzle-orm/pg-core");
+const _clientauth = require("../../middleware/client.auth");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -77,12 +78,15 @@ let Version1Controller = class Version1Controller {
     getVouch(vouchId) {
         return this.vouchService.getVouch(parseInt(vouchId));
     }
-    postVouch(id, body) {
+    postVouch(id, body, req) {
         if (!id) {
             return new _common.HttpException('id is required', 400);
         }
         if (!body) {
             return new _common.HttpException('vouch body is required', 400);
+        }
+        if (!body.client) {
+            body.client = req.client;
         }
         return this.vouchService.postVouch(body);
     }
@@ -92,21 +96,27 @@ let Version1Controller = class Version1Controller {
     getVouchById(vouchId) {
         return this.vouchService.getVouch(parseInt(vouchId));
     }
-    approveVouch(vouchId, body) {
+    approveVouch(vouchId, body, req) {
         if (!body) {
             return new _common.HttpException('Invalid body', 400);
         }
         if (!body.vouchId) body.vouchId = parseInt(vouchId);
+        if (!body.client) {
+            body.client = req.client;
+        }
         return this.vouchService.approveVouch(body);
     }
-    denyVouch(vouchId, body) {
+    denyVouch(vouchId, body, req) {
         if (!body) {
             return new _common.HttpException('Invalid body', 400);
         }
         if (!body.vouchId) body.vouchId = parseInt(vouchId);
+        if (!body.client) {
+            body.client = req.client;
+        }
         return this.vouchService.denyVouch(body);
     }
-    askProof(vouchId, who, body) {
+    askProof(vouchId, who, body, req) {
         if (!body) {
             return new _common.HttpException('Invalid body', 400);
         }
@@ -117,14 +127,20 @@ let Version1Controller = class Version1Controller {
         ].includes(who)) {
             return new _common.HttpException('Invalid who', 400);
         }
+        if (!body.client) {
+            body.client = req.client;
+        }
         return this.vouchService.askProofVouch({
             ...body,
             who
         });
     }
-    updateVouch(vouchId, body) {
+    updateVouch(vouchId, body, req) {
         if (!body) {
             return new _common.HttpException('Invalid body', 400);
+        }
+        if (!body.client) {
+            body.client = req.client;
         }
         return this.vouchService.updateVouch(parseInt(vouchId), body, true);
     }
@@ -186,10 +202,12 @@ _ts_decorate([
     (0, _common.Post)('profiles/:id/vouches'),
     _ts_param(0, (0, _common.Param)('id')),
     _ts_param(1, (0, _common.Body)()),
+    _ts_param(2, (0, _common.Request)()),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
-        typeof _pgcore.PgInsertValue === "undefined" ? Object : _pgcore.PgInsertValue
+        typeof _pgcore.PgInsertValue === "undefined" ? Object : _pgcore.PgInsertValue,
+        typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "postVouch", null);
 _ts_decorate([
@@ -212,20 +230,24 @@ _ts_decorate([
     (0, _common.Post)('vouches/:vouchId/approve'),
     _ts_param(0, (0, _common.Param)('vouchId')),
     _ts_param(1, (0, _common.Body)()),
+    _ts_param(2, (0, _common.Request)()),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
-        typeof _schema.VouchActivity === "undefined" ? Object : _schema.VouchActivity
+        typeof _schema.VouchActivity === "undefined" ? Object : _schema.VouchActivity,
+        typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "approveVouch", null);
 _ts_decorate([
     (0, _common.Post)('vouches/:vouchId/deny'),
     _ts_param(0, (0, _common.Param)('vouchId')),
     _ts_param(1, (0, _common.Body)()),
+    _ts_param(2, (0, _common.Request)()),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
-        typeof _schema.VouchActivity === "undefined" ? Object : _schema.VouchActivity
+        typeof _schema.VouchActivity === "undefined" ? Object : _schema.VouchActivity,
+        typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "denyVouch", null);
 _ts_decorate([
@@ -233,21 +255,25 @@ _ts_decorate([
     _ts_param(0, (0, _common.Param)('vouchId')),
     _ts_param(1, (0, _common.Param)('who')),
     _ts_param(2, (0, _common.Body)()),
+    _ts_param(3, (0, _common.Request)()),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
         String,
-        Object
+        Object,
+        typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "askProof", null);
 _ts_decorate([
     (0, _common.Post)('vouches/:vouchId/update'),
     _ts_param(0, (0, _common.Param)('vouchId')),
     _ts_param(1, (0, _common.Body)()),
+    _ts_param(2, (0, _common.Request)()),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
-        typeof Partial === "undefined" ? Object : Partial
+        typeof Partial === "undefined" ? Object : Partial,
+        typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "updateVouch", null);
 _ts_decorate([

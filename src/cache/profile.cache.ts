@@ -338,7 +338,7 @@ export class ProfileService implements OnModuleInit {
       return profile.products.match(profileSearchRegex);
     });
 
-    return results.slice(0, 10);
+    return results.slice(0, 20);
   }
 
   // async transferProfileOwnership(

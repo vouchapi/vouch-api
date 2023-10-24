@@ -5,12 +5,14 @@ import {
   HttpException,
   Param,
   Post,
-  Query
+  Query,
+  Request
 } from '@nestjs/common';
 import { ProfileService } from '../../cache/profile.cache';
 import { VouchActivity, profile, vouch } from '../../drizzle/schema';
 import { VouchService, VouchesFetchOptions } from '../../cache/vouch.cache';
 import { PgInsertValue } from 'drizzle-orm/pg-core';
+import { ClientAuthRequest } from '../../middleware/client.auth';
 
 @Controller('v1')
 export class Version1Controller {
@@ -78,13 +80,18 @@ export class Version1Controller {
   @Post('profiles/:id/vouches')
   postVouch(
     @Param('id') id: string,
-    @Body() body: PgInsertValue<typeof vouch>
+    @Body() body: PgInsertValue<typeof vouch>,
+    @Request() req: ClientAuthRequest
   ) {
     if (!id) {
       return new HttpException('id is required', 400);
     }
     if (!body) {
       return new HttpException('vouch body is required', 400);
+    }
+
+    if (!body.client) {
+      body.client = req.client;
     }
 
     return this.vouchService.postVouch(body);
@@ -101,22 +108,36 @@ export class Version1Controller {
   }
 
   @Post('vouches/:vouchId/approve')
-  approveVouch(@Param('vouchId') vouchId: string, @Body() body: VouchActivity) {
+  approveVouch(
+    @Param('vouchId') vouchId: string,
+    @Body() body: VouchActivity,
+    @Request() req: ClientAuthRequest
+  ) {
     if (!body) {
       return new HttpException('Invalid body', 400);
     }
 
     if (!body.vouchId) body.vouchId = parseInt(vouchId);
+    if (!body.client) {
+      body.client = req.client;
+    }
 
     return this.vouchService.approveVouch(body);
   }
 
   @Post('vouches/:vouchId/deny')
-  denyVouch(@Param('vouchId') vouchId: string, @Body() body: VouchActivity) {
+  denyVouch(
+    @Param('vouchId') vouchId: string,
+    @Body() body: VouchActivity,
+    @Request() req: ClientAuthRequest
+  ) {
     if (!body) {
       return new HttpException('Invalid body', 400);
     }
     if (!body.vouchId) body.vouchId = parseInt(vouchId);
+    if (!body.client) {
+      body.client = req.client;
+    }
 
     return this.vouchService.denyVouch(body);
   }
@@ -125,7 +146,8 @@ export class Version1Controller {
   askProof(
     @Param('vouchId') vouchId: string,
     @Param('who') who: 'RECEIVER' | 'VOUCHER',
-    @Body() body: VouchActivity & { who: 'RECEIVER' | 'VOUCHER' }
+    @Body() body: VouchActivity & { who: 'RECEIVER' | 'VOUCHER' },
+    @Request() req: ClientAuthRequest
   ) {
     if (!body) {
       return new HttpException('Invalid body', 400);
@@ -136,16 +158,25 @@ export class Version1Controller {
       return new HttpException('Invalid who', 400);
     }
 
+    if (!body.client) {
+      body.client = req.client;
+    }
+
     return this.vouchService.askProofVouch({ ...body, who });
   }
 
   @Post('vouches/:vouchId/update')
   updateVouch(
     @Param('vouchId') vouchId: string,
-    @Body() body: Partial<typeof vouch.$inferSelect>
+    @Body() body: Partial<typeof vouch.$inferSelect>,
+    @Request() req: ClientAuthRequest
   ) {
     if (!body) {
       return new HttpException('Invalid body', 400);
+    }
+
+    if (!body.client) {
+      body.client = req.client;
     }
 
     return this.vouchService.updateVouch(parseInt(vouchId), body, true);
