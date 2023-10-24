@@ -14,6 +14,8 @@ async function bootstrap() {
     new FastifyAdapter()
   );
   await app.register(helmet);
-  await app.listen(process.env.PORT ?? 8080);
+  await app.listen(process.env.PORT ?? 8080).then(() => {
+    console.log(`Server is running on ${process.env.PORT ?? 8080}`);
+  });
 }
 bootstrap();
