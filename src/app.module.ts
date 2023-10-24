@@ -27,6 +27,7 @@ import { ClientAuthMiddleware } from './middleware/client.auth';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    if (process.env.NODE_ENV === 'dev') return;
     consumer.apply(AppAuthMiddleware).forRoutes('register');
     consumer.apply(ClientAuthMiddleware).forRoutes('v1/*');
   }

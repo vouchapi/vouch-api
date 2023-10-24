@@ -148,7 +148,7 @@ let Version1Controller = class Version1Controller {
         return this.profileService.getTop10();
     }
     getHot10() {
-        return this.vouchService.getHot10();
+        return this.profileService.getHot10();
     }
     getProducts(query) {
         return this.profileService.searchProduct(query);

@@ -267,35 +267,6 @@ export class VouchService implements OnModuleInit {
     return vouches;
   }
 
-  getHot10() {
-    // most approved vouches in this week
-    const vouches = this.cache.toJSON();
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const hotVouches = vouches.filter((vouch) => vouch.createdAt > weekAgo);
-    const merged = hotVouches.reduce(
-      (acc, vouch) => {
-        if (acc[vouch.receiverId]) {
-          acc[vouch.receiverId].push(vouch);
-        } else {
-          acc[vouch.receiverId] = [vouch];
-        }
-        return acc;
-      },
-      {} as Record<string, (typeof vouch.$inferSelect)[]>
-    );
-    const hotVouchesCount = Object.entries(merged).map(([key, value]) => {
-      return {
-        id: key,
-        username: value[0].receiverName,
-        count: value.length
-      };
-    });
-    const sorted = hotVouchesCount.sort((a, b) => b.count - a.count);
-    const top10 = sorted.slice(0, 10);
-    return top10;
-  }
-
   async approveVouch(
     { vouchId, staffId, staffName, client }: VouchActivity,
     withProof = false

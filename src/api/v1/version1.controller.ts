@@ -189,7 +189,7 @@ export class Version1Controller {
 
   @Get('leaderboard/hot')
   getHot10() {
-    return this.vouchService.getHot10();
+    return this.profileService.getHot10();
   }
 
   @Get('products/:query')

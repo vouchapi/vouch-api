@@ -29,6 +29,7 @@ function _ts_decorate(decorators, target, key, desc) {
 }
 let AppModule = class AppModule {
     configure(consumer) {
+        if (process.env.NODE_ENV === 'dev') return;
         consumer.apply(_appauth.AppAuthMiddleware).forRoutes('register');
         consumer.apply(_clientauth.ClientAuthMiddleware).forRoutes('v1/*');
     }
