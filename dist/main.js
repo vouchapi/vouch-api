@@ -16,7 +16,7 @@ function _interop_require_default(obj) {
 async function bootstrap() {
     const app = await _core.NestFactory.create(_appmodule.AppModule, new _platformfastify.FastifyAdapter());
     await app.register(_helmet.default);
-    await app.listen(process.env.PORT ?? 8080).then(()=>{
+    await app.listen(process.env.PORT ?? 8080, '0.0.0.0').then(()=>{
         console.log(`Server is running on ${process.env.PORT ?? 8080}`);
     });
 }
