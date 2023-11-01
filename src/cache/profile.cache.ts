@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { Collection } from 'discord.js';
 import { eq } from 'drizzle-orm';
 import { PgInsertValue } from 'drizzle-orm/pg-core';
 import { PG_CONNECTION } from '../constants';
 import { DbType } from '../drizzle/drizzle.module';
 import { profile, vouch } from '../drizzle/schema';
-import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import {
   Events,
   ProfileCreatedEvent,
@@ -185,10 +185,12 @@ export class ProfileService implements OnModuleInit {
   }
 
   async refreshHotLeaderboard() {
+    await new Promise((resolve) => setTimeout(resolve, 1000 * 9));
+
     const starting = new Date();
 
     const allVouches = await this.db.select().from(vouch);
-    const allProfiles = await this.db.select().from(profile);
+    const allProfiles = this.cache.toJSON();
 
     const hot = allProfiles.map((profile) => {
       const weeklyVouches = allVouches.filter(

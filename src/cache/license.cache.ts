@@ -1,9 +1,11 @@
-import { HttpException, Inject, Logger, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Collection } from 'discord.js';
 import { PG_CONNECTION } from '../constants';
 import { DbType } from '../drizzle/drizzle.module';
 import { clientLicense } from '../drizzle/schema';
+import { APIException } from '../api/exception';
 
+@Injectable()
 export class LicenseService implements OnModuleInit {
   private cache = new Collection<string, typeof clientLicense.$inferSelect>();
   private logger = new Logger(LicenseService.name);
@@ -21,7 +23,7 @@ export class LicenseService implements OnModuleInit {
   async registerLicense(key: string, client: string) {
     const alreadyRegistered = this.cache.get(key);
     if (alreadyRegistered) {
-      return new HttpException('License already registered.', 400);
+      return new APIException('LICENSE_ALREADY_REGISTERED');
     }
 
     // size 24
@@ -39,7 +41,7 @@ export class LicenseService implements OnModuleInit {
       .returning();
 
     if (!result[0]) {
-      return new HttpException('Failed to register license.', 500);
+      return new APIException('LICENSE_REGISTRATION_FAILED');
     }
 
     this.cache.set(key, result[0]);

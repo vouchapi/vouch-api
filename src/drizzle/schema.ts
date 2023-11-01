@@ -1,3 +1,4 @@
+import { relations } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -44,6 +45,13 @@ export const vouchStatus = pgEnum('VouchStatus', [
   'DELETED'
 ]);
 
+export const notificationType = pgEnum('NotificationType', [
+  'VOUCH.RECEIVED',
+  'VOUCH.APPROVED',
+  'VOUCH.DENIED',
+  'VOUCH.PROOF_REQUEST'
+]);
+
 type ElementType<T extends ReadonlyArray<unknown>> = T extends ReadonlyArray<
   infer ElementType
 >
@@ -60,32 +68,17 @@ export type VouchActivity = {
   at: Date;
 };
 
-export const vouch = pgTable('Vouch', {
+export const clientLicense = pgTable('license', {
   id: serial('id').primaryKey().notNull(),
-  vouchStatus: vouchStatus('vouchStatus').default('UNCHECKED').notNull(),
-  voucherId: text('voucherId').notNull(),
-  voucherName: text('voucherName').notNull(),
-  receiverId: text('receiverId')
-    .notNull()
-    .references(() => profile.userId, {
-      onDelete: 'restrict',
-      onUpdate: 'cascade'
-    }),
-  receiverName: text('receiverName').notNull(),
-  comment: text('comment').notNull(),
-  serverId: text('serverId').notNull(),
-  serverName: text('serverName').notNull(),
-  customData: json('customData').$type<Record<string, any>>(),
-  deniedReason: text('deniedReason'),
-  activities: json('activities').array().$type<VouchActivity[]>(),
-  client: text('client').default('').notNull(),
-  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull()
+  client: text('client').notNull(),
+  key: text('key').notNull(),
+  secret: text('secret').notNull()
 });
 
 export const profile = pgTable(
   'Profile',
   {
-    id: serial('id').primaryKey().notNull().unique(),
+    id: serial('id').primaryKey().notNull(),
     userId: text('userId').notNull().unique(),
     username: text('username').notNull(),
     customAvatar: text('customAvatar'),
@@ -126,12 +119,43 @@ export const profile = pgTable(
   }
 );
 
-export const notificationType = pgEnum('NotificationType', [
-  'VOUCH.RECEIVED',
-  'VOUCH.APPROVED',
-  'VOUCH.DENIED',
-  'VOUCH.PROOF_REQUEST'
-]);
+export const profileRelations = relations(profile, ({ one }) => ({
+  notificationSettings: one(notificationSettings, {
+    fields: [profile.userId],
+    references: [notificationSettings.userId]
+  })
+}));
+
+export const vouch = pgTable('Vouch', {
+  id: serial('id').primaryKey().notNull(),
+  vouchStatus: vouchStatus('vouchStatus').default('UNCHECKED').notNull(),
+  voucherId: text('voucherId').notNull(),
+  voucherName: text('voucherName').notNull(),
+  receiverId: text('receiverId').notNull(),
+  receiverName: text('receiverName').notNull(),
+  comment: text('comment').notNull(),
+  serverId: text('serverId').notNull(),
+  serverName: text('serverName').notNull(),
+  customData: json('customData').$type<Record<string, any>>(),
+  deniedReason: text('deniedReason'),
+  activities: json('activities').array().$type<VouchActivity[]>(),
+  client: text('client').default('').notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull()
+});
+
+export const notificationSettings = pgTable('notificationSettings', {
+  id: serial('id').primaryKey().notNull(),
+  userId: text('userId')
+    .notNull()
+    .unique()
+    .references(() => profile.userId),
+  vouchReceived: boolean('vouchReceived').default(true).notNull(),
+  vouchApproved: boolean('vouchApproved').default(true).notNull(),
+  vouchDenied: boolean('vouchDenied').default(true).notNull(),
+  vouchProofRequest: boolean('vouchProofRequest').default(true).notNull(),
+  createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt', { mode: 'date' }).defaultNow().notNull()
+});
 
 export const notification = pgTable('notification', {
   id: serial('id').primaryKey().notNull(),
@@ -141,11 +165,4 @@ export const notification = pgTable('notification', {
   client: text('client').notNull(),
   read: boolean('read').default(false).notNull(),
   createdAt: timestamp('createdAt', { mode: 'date' }).defaultNow().notNull()
-});
-
-export const clientLicense = pgTable('license', {
-  id: serial('id').primaryKey().notNull(),
-  client: text('client').notNull(),
-  key: text('key').notNull(),
-  secret: text('secret').notNull()
 });

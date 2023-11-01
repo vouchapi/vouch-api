@@ -12,8 +12,8 @@ const _common = require("@nestjs/common");
 const _profilecache = require("../../cache/profile.cache");
 const _schema = require("../../drizzle/schema");
 const _vouchcache = require("../../cache/vouch.cache");
-const _pgcore = require("drizzle-orm/pg-core");
 const _clientauth = require("../../middleware/client.auth");
+const _exception = require("../exception");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -48,10 +48,10 @@ let Version1Controller = class Version1Controller {
     }
     registerProfile(id, body) {
         if (!id) {
-            return new _common.HttpException('id is required', 400);
+            return new _exception.APIException('MISSING_PROFILE_ID');
         }
         if (!body || !body.username) {
-            return new _common.HttpException('username is required', 400);
+            return new _exception.APIException('MISSING_PROFILE_USERNAME');
         }
         return this.profileService.registerProfile([
             {
@@ -62,16 +62,16 @@ let Version1Controller = class Version1Controller {
     }
     updateProfile(id, body) {
         if (!id) {
-            return new _common.HttpException('id is required', 400);
+            return new _exception.APIException('MISSING_PROFILE_ID');
         }
         if (!body || !body.username) {
-            return new _common.HttpException('username is required', 400);
+            return new _exception.APIException('MISSING_PROFILE_USERNAME');
         }
         if (body.id) {
-            return new _common.HttpException('id cannot be updated', 400);
+            delete body.id;
         }
         if (body.userId) {
-            return new _common.HttpException('userId cannot be updated. user /transfer to transfer ownership', 400);
+            return new _exception.APIException('UPDATE_PROFILE_USER_ID_NOT_ALLOWED');
         }
         return this.profileService.updateProfile(id, body.username, body, true);
     }
@@ -80,10 +80,10 @@ let Version1Controller = class Version1Controller {
     }
     postVouch(id, body, req) {
         if (!id) {
-            return new _common.HttpException('id is required', 400);
+            return new _exception.APIException('MISSING_PROFILE_ID');
         }
         if (!body) {
-            return new _common.HttpException('vouch body is required', 400);
+            return new _exception.APIException('MISSING_VOUCH_DETAILS');
         }
         if (!body.client) {
             body.client = req.client;
@@ -98,7 +98,7 @@ let Version1Controller = class Version1Controller {
     }
     approveVouch(vouchId, body, req) {
         if (!body) {
-            return new _common.HttpException('Invalid body', 400);
+            return new _exception.APIException('INVALID_VOUCH_ACTIVITY_BODY');
         }
         if (!body.vouchId) body.vouchId = parseInt(vouchId);
         if (!body.client) {
@@ -108,7 +108,7 @@ let Version1Controller = class Version1Controller {
     }
     denyVouch(vouchId, body, req) {
         if (!body) {
-            return new _common.HttpException('Invalid body', 400);
+            return new _exception.APIException('INVALID_VOUCH_ACTIVITY_BODY');
         }
         if (!body.vouchId) body.vouchId = parseInt(vouchId);
         if (!body.client) {
@@ -118,14 +118,14 @@ let Version1Controller = class Version1Controller {
     }
     askProof(vouchId, who, body, req) {
         if (!body) {
-            return new _common.HttpException('Invalid body', 400);
+            return new _exception.APIException('INVALID_VOUCH_ACTIVITY_BODY');
         }
         if (!body.vouchId) body.vouchId = parseInt(vouchId);
         if (![
             'RECEIVER',
             'VOUCHER'
         ].includes(who)) {
-            return new _common.HttpException('Invalid who', 400);
+            return new _exception.APIException('INVALID_VOUCH_PROOF_ACTIVITY_BODY');
         }
         if (!body.client) {
             body.client = req.client;
@@ -137,7 +137,7 @@ let Version1Controller = class Version1Controller {
     }
     updateVouch(vouchId, body, req) {
         if (!body) {
-            return new _common.HttpException('Invalid body', 400);
+            return new _exception.APIException('MISSING_VOUCH_DETAILS');
         }
         if (!body.client) {
             body.client = req.client;
@@ -206,7 +206,7 @@ _ts_decorate([
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [
         String,
-        typeof _pgcore.PgInsertValue === "undefined" ? Object : _pgcore.PgInsertValue,
+        Object,
         typeof _clientauth.ClientAuthRequest === "undefined" ? Object : _clientauth.ClientAuthRequest
     ])
 ], Version1Controller.prototype, "postVouch", null);

@@ -18,11 +18,17 @@ _export(exports, {
     notification: function() {
         return notification;
     },
+    notificationSettings: function() {
+        return notificationSettings;
+    },
     notificationType: function() {
         return notificationType;
     },
     profile: function() {
         return profile;
+    },
+    profileRelations: function() {
+        return profileRelations;
     },
     profileStatus: function() {
         return profileStatus;
@@ -37,6 +43,7 @@ _export(exports, {
         return vouchStatus;
     }
 });
+const _drizzleorm = require("drizzle-orm");
 const _pgcore = require("drizzle-orm/pg-core");
 const profileStatus = (0, _pgcore.pgEnum)('ProfileStatus', [
     'DEAL_WITH_CAUTION',
@@ -71,29 +78,20 @@ const vouchStatus = (0, _pgcore.pgEnum)('VouchStatus', [
     'UNCHECKED',
     'DELETED'
 ]);
-const vouch = (0, _pgcore.pgTable)('Vouch', {
+const notificationType = (0, _pgcore.pgEnum)('NotificationType', [
+    'VOUCH.RECEIVED',
+    'VOUCH.APPROVED',
+    'VOUCH.DENIED',
+    'VOUCH.PROOF_REQUEST'
+]);
+const clientLicense = (0, _pgcore.pgTable)('license', {
     id: (0, _pgcore.serial)('id').primaryKey().notNull(),
-    vouchStatus: vouchStatus('vouchStatus').default('UNCHECKED').notNull(),
-    voucherId: (0, _pgcore.text)('voucherId').notNull(),
-    voucherName: (0, _pgcore.text)('voucherName').notNull(),
-    receiverId: (0, _pgcore.text)('receiverId').notNull().references(()=>profile.userId, {
-        onDelete: 'restrict',
-        onUpdate: 'cascade'
-    }),
-    receiverName: (0, _pgcore.text)('receiverName').notNull(),
-    comment: (0, _pgcore.text)('comment').notNull(),
-    serverId: (0, _pgcore.text)('serverId').notNull(),
-    serverName: (0, _pgcore.text)('serverName').notNull(),
-    customData: (0, _pgcore.json)('customData').$type(),
-    deniedReason: (0, _pgcore.text)('deniedReason'),
-    activities: (0, _pgcore.json)('activities').array().$type(),
-    client: (0, _pgcore.text)('client').default('').notNull(),
-    createdAt: (0, _pgcore.timestamp)('createdAt', {
-        mode: 'date'
-    }).defaultNow().notNull()
+    client: (0, _pgcore.text)('client').notNull(),
+    key: (0, _pgcore.text)('key').notNull(),
+    secret: (0, _pgcore.text)('secret').notNull()
 });
 const profile = (0, _pgcore.pgTable)('Profile', {
-    id: (0, _pgcore.serial)('id').primaryKey().notNull().unique(),
+    id: (0, _pgcore.serial)('id').primaryKey().notNull(),
     userId: (0, _pgcore.text)('userId').notNull().unique(),
     username: (0, _pgcore.text)('username').notNull(),
     customAvatar: (0, _pgcore.text)('customAvatar'),
@@ -119,12 +117,48 @@ const profile = (0, _pgcore.pgTable)('Profile', {
         userId: (0, _pgcore.index)('userId').on(table.userId)
     };
 });
-const notificationType = (0, _pgcore.pgEnum)('NotificationType', [
-    'VOUCH.RECEIVED',
-    'VOUCH.APPROVED',
-    'VOUCH.DENIED',
-    'VOUCH.PROOF_REQUEST'
-]);
+const profileRelations = (0, _drizzleorm.relations)(profile, ({ one })=>({
+        notificationSettings: one(notificationSettings, {
+            fields: [
+                profile.userId
+            ],
+            references: [
+                notificationSettings.userId
+            ]
+        })
+    }));
+const vouch = (0, _pgcore.pgTable)('Vouch', {
+    id: (0, _pgcore.serial)('id').primaryKey().notNull(),
+    vouchStatus: vouchStatus('vouchStatus').default('UNCHECKED').notNull(),
+    voucherId: (0, _pgcore.text)('voucherId').notNull(),
+    voucherName: (0, _pgcore.text)('voucherName').notNull(),
+    receiverId: (0, _pgcore.text)('receiverId').notNull(),
+    receiverName: (0, _pgcore.text)('receiverName').notNull(),
+    comment: (0, _pgcore.text)('comment').notNull(),
+    serverId: (0, _pgcore.text)('serverId').notNull(),
+    serverName: (0, _pgcore.text)('serverName').notNull(),
+    customData: (0, _pgcore.json)('customData').$type(),
+    deniedReason: (0, _pgcore.text)('deniedReason'),
+    activities: (0, _pgcore.json)('activities').array().$type(),
+    client: (0, _pgcore.text)('client').default('').notNull(),
+    createdAt: (0, _pgcore.timestamp)('createdAt', {
+        mode: 'date'
+    }).defaultNow().notNull()
+});
+const notificationSettings = (0, _pgcore.pgTable)('notificationSettings', {
+    id: (0, _pgcore.serial)('id').primaryKey().notNull(),
+    userId: (0, _pgcore.text)('userId').notNull().unique().references(()=>profile.userId),
+    vouchReceived: (0, _pgcore.boolean)('vouchReceived').default(true).notNull(),
+    vouchApproved: (0, _pgcore.boolean)('vouchApproved').default(true).notNull(),
+    vouchDenied: (0, _pgcore.boolean)('vouchDenied').default(true).notNull(),
+    vouchProofRequest: (0, _pgcore.boolean)('vouchProofRequest').default(true).notNull(),
+    createdAt: (0, _pgcore.timestamp)('createdAt', {
+        mode: 'date'
+    }).defaultNow().notNull(),
+    updatedAt: (0, _pgcore.timestamp)('updatedAt', {
+        mode: 'date'
+    }).defaultNow().notNull()
+});
 const notification = (0, _pgcore.pgTable)('notification', {
     id: (0, _pgcore.serial)('id').primaryKey().notNull(),
     userId: (0, _pgcore.text)('userId').notNull(),
@@ -135,10 +169,4 @@ const notification = (0, _pgcore.pgTable)('notification', {
     createdAt: (0, _pgcore.timestamp)('createdAt', {
         mode: 'date'
     }).defaultNow().notNull()
-});
-const clientLicense = (0, _pgcore.pgTable)('license', {
-    id: (0, _pgcore.serial)('id').primaryKey().notNull(),
-    client: (0, _pgcore.text)('client').notNull(),
-    key: (0, _pgcore.text)('key').notNull(),
-    secret: (0, _pgcore.text)('secret').notNull()
 });

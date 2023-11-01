@@ -13,6 +13,7 @@ const _discord = require("discord.js");
 const _constants = require("../constants");
 const _drizzlemodule = require("../drizzle/drizzle.module");
 const _schema = require("../drizzle/schema");
+const _exception = require("../api/exception");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -51,7 +52,7 @@ let LicenseService = class LicenseService {
     async registerLicense(key, client) {
         const alreadyRegistered = this.cache.get(key);
         if (alreadyRegistered) {
-            return new _common.HttpException('License already registered.', 400);
+            return new _exception.APIException('LICENSE_ALREADY_REGISTERED');
         }
         // size 24
         const secret = Math.random().toString(36).substring(2, 26);
@@ -63,7 +64,7 @@ let LicenseService = class LicenseService {
             }
         ]).returning();
         if (!result[0]) {
-            return new _common.HttpException('Failed to register license.', 500);
+            return new _exception.APIException('LICENSE_REGISTRATION_FAILED');
         }
         this.cache.set(key, result[0]);
         return {
@@ -95,6 +96,7 @@ let LicenseService = class LicenseService {
     }
 };
 LicenseService = _ts_decorate([
+    (0, _common.Injectable)(),
     _ts_param(0, (0, _common.Inject)(_constants.PG_CONNECTION)),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [

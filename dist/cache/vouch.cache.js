@@ -17,6 +17,7 @@ const _schema = require("../drizzle/schema");
 const _profilecache = require("./profile.cache");
 const _eventemitter = require("@nestjs/event-emitter");
 const _events = require("../events/events");
+const _exception = require("../api/exception");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -69,22 +70,22 @@ let VouchService = class VouchService {
     }
     updateVouch(id, vouchData, instant = false) {
         const current = this.cache.get(id);
-        if (!current) return new _common.HttpException('Vouch not found', 404);
+        if (!current) return new _exception.APIException('VOUCH_NOT_FOUND');
         const merged = this.mergeAndValidate(current, vouchData);
-        if (merged instanceof _common.HttpException) {
+        if (merged instanceof _exception.APIException || merged instanceof _common.HttpException) {
             return merged;
         }
         if (vouchData.vouchStatus === current.vouchStatus) {
-            return new _common.HttpException('Vouch is already ' + vouchData.vouchStatus, 400);
+            return new _common.HttpException('Vouch is already ' + vouchData.vouchStatus, 502);
         }
         if (vouchData.vouchStatus === 'UNCHECKED') {
-            return new _common.HttpException('Vouch status cannot be UNCHECKED', 400);
+            return new _exception.APIException('VOUCH_STATUS_CANNOT_BE_UNCHECKED');
         }
         if (current.vouchStatus === 'APPROVED' && merged.vouchStatus === 'DENIED') {
-            return new _common.HttpException('Vouch already approved cannot be denied', 400);
+            return new _exception.APIException('VOUCH_APPROVED_CANNOT_BE_DENIED');
         }
         if (current.vouchStatus === 'APPROVED' && (merged.vouchStatus === 'PENDING_PROOF_RECEIVER' || merged.vouchStatus === 'PENDING_PROOF_VOUCHER')) {
-            return new _common.HttpException('Vouch already approved cannot be asked proof', 400);
+            return new _exception.APIException('VOUCH_APPROVED_CANNOT_BE_ASKED_FOR_PROOF');
         }
         if (instant) {
             this.dbUpdateVouch(id, vouchData);
@@ -96,9 +97,13 @@ let VouchService = class VouchService {
     async dbPostVouch(vouchData) {
         const starting = new Date();
         const vouchDataValidated = this.validateVouch(vouchData);
-        if (vouchDataValidated instanceof _common.HttpException) {
+        if (vouchDataValidated instanceof _exception.APIException) {
             return vouchDataValidated;
         }
+        if (vouchDataValidated.id) {
+            delete vouchDataValidated.id;
+        }
+        console.log('🚀 ~ file: vouch.cache.ts:135 ~ VouchService ~ vouchDataValidated:', vouchDataValidated);
         const result = await this.db.insert(_schema.vouch).values(vouchDataValidated).returning();
         // @ts-ignore
         this.cache.set(result[0].id, result[0]);
@@ -115,7 +120,7 @@ let VouchService = class VouchService {
     }
     async postVouch(vouchData, instant = true) {
         const vouchDataValidated = this.validateVouch(vouchData);
-        if (vouchDataValidated instanceof _common.HttpException) {
+        if (vouchDataValidated instanceof _exception.APIException) {
             return vouchDataValidated;
         }
         await this.profileService.getProfile(vouchDataValidated.receiverId, vouchDataValidated.receiverName, false);
@@ -134,7 +139,7 @@ let VouchService = class VouchService {
             return !vouchData[key];
         });
         if (missingKeys.length > 0) {
-            return new _common.HttpException('Missing required keys: ' + missingKeys.map(([key])=>key).join(', '), 400);
+            return new _common.HttpException('Missing required keys: ' + missingKeys.map(([key])=>key).join(', '), 502);
         }
         const invalidKeys = Object.entries(_schema.vouch).filter(([, value])=>{
             return value && value.notNull && !value.hasDefault;
@@ -143,7 +148,7 @@ let VouchService = class VouchService {
             return typeof vouchData[key] !== value.dataType;
         });
         if (invalidKeysData.length > 0) {
-            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value.type).join(', '), 400);
+            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value.type).join(', '), 502);
         }
         vouchData.comment = this.refineString(vouchData.comment);
         return vouchData;
@@ -154,15 +159,15 @@ let VouchService = class VouchService {
     getVouches(query) {
         let vouches = this.cache.toJSON();
         if (query) {
-            if (typeof query.vouchId === 'string') {
-                const vouchIds = query.vouchId.split(',');
+            if (typeof query.vouchIds === 'string') {
+                const vouchIds = query.vouchIds.split(',');
                 vouches = vouches.filter((vouch)=>vouchIds.includes(vouch.id + ''));
             }
             if (typeof query.status === 'string') {
                 vouches = vouches.filter((vouch)=>vouch.vouchStatus === query.status);
             }
-            if (typeof query.receiverId === 'string') {
-                vouches = vouches.filter((vouch)=>vouch.receiverId === query.receiverId);
+            if (typeof query.receiverId === 'string' || typeof query.profileId === 'string') {
+                vouches = vouches.filter((vouch)=>vouch.receiverId === query.receiverId || vouch.receiverId === query.profileId);
             }
             if (typeof query.senderId === 'string') {
                 vouches = vouches.filter((vouch)=>vouch.voucherId === query.senderId);
@@ -195,7 +200,7 @@ let VouchService = class VouchService {
             activity: withProof ? 'APPROVED_WITH_PROOF' : 'APPROVED',
             client
         });
-        if (validate instanceof _common.HttpException) {
+        if (validate instanceof _exception.APIException) {
             return validate;
         }
         const vouch = await this.updateVouch(vouchId, {
@@ -212,7 +217,7 @@ let VouchService = class VouchService {
                 }
             ]
         }, true);
-        if (vouch instanceof _common.HttpException) {
+        if (vouch instanceof _exception.APIException || vouch instanceof _common.HttpException) {
             return vouch;
         }
         const currentProfile = this.profileService.getProfile(vouch.receiverId, vouch.receiverName, true);
@@ -236,7 +241,7 @@ let VouchService = class VouchService {
             activity: 'DENIED',
             client
         });
-        if (validate instanceof _common.HttpException) {
+        if (validate instanceof _exception.APIException) {
             return validate;
         }
         return this.updateVouch(vouchId, {
@@ -266,7 +271,7 @@ let VouchService = class VouchService {
             client,
             who
         }, true);
-        if (validate instanceof _common.HttpException) {
+        if (validate instanceof _exception.APIException) {
             return validate;
         }
         return this.updateVouch(vouchId, {
@@ -314,7 +319,7 @@ let VouchService = class VouchService {
             return !merged[key];
         });
         if (missingKeys.length > 0) {
-            return new _common.HttpException('Missing required keys: ' + missingKeys.map(([key])=>key).join(', '), 400);
+            return new _common.HttpException('Missing required keys: ' + missingKeys.map(([key])=>key).join(', '), 502);
         }
         const invalidKeys = Object.entries(_schema.vouch).filter(([, value])=>{
             return value && value.notNull && !value.hasDefault;
@@ -323,7 +328,7 @@ let VouchService = class VouchService {
             return typeof merged[key] !== value.dataType;
         });
         if (invalidKeysData.length > 0) {
-            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value.type).join(', '), 400);
+            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value.type).join(', '), 502);
         }
         return merged;
     }
@@ -341,7 +346,7 @@ let VouchService = class VouchService {
             return !data[key];
         });
         if (missingKeys.length > 0) {
-            return new _common.HttpException('Missing required keys: ' + missingKeys.join(', '), 400);
+            return new _common.HttpException('Missing required keys: ' + missingKeys.join(', '), 502);
         }
         const types = {
             vouchId: 'number',
@@ -355,7 +360,7 @@ let VouchService = class VouchService {
             return typeof data[key] !== type && data[key];
         });
         if (invalidKeysData.length > 0) {
-            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value).join(', '), 400);
+            return new _common.HttpException('Invalid keys: ' + invalidKeysData.map(([key, value])=>key + ' should be ' + value).join(', '), 502);
         }
         return data;
     }
@@ -424,6 +429,7 @@ let VouchService = class VouchService {
     }
 };
 VouchService = _ts_decorate([
+    (0, _common.Injectable)(),
     _ts_param(0, (0, _common.Inject)(_constants.PG_CONNECTION)),
     _ts_metadata("design:type", Function),
     _ts_metadata("design:paramtypes", [

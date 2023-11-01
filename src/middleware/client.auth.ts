@@ -1,6 +1,7 @@
-import { HttpException, Injectable, NestMiddleware } from '@nestjs/common';
+import { Injectable, NestMiddleware } from '@nestjs/common';
 import { LicenseService } from '../cache/license.cache';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { APIException } from '../api/exception';
 
 export interface ClientAuthRequest extends FastifyRequest {
   client: string;
@@ -15,7 +16,7 @@ export class ClientAuthMiddleware implements NestMiddleware {
     const secret = req.headers['x-client-secret'] as string;
 
     if (!key || !secret) {
-      throw new HttpException('Unauthorized', 401);
+      throw new APIException('UNAUTHORIZED');
     }
 
     const { valid, client } = await this.licenseService.validateLicense(
@@ -23,7 +24,7 @@ export class ClientAuthMiddleware implements NestMiddleware {
       secret
     );
     if (!valid || !client) {
-      throw new HttpException('Unauthorized', 401);
+      throw new APIException('UNAUTHORIZED');
     }
 
     req.client = client;

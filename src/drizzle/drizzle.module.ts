@@ -1,10 +1,12 @@
 import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigType } from '@nestjs/config';
 import { PostgresJsDatabase, drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
 import postgres from 'postgres';
 import { DbConfig } from '../config';
 import { PG_CONNECTION } from '../constants';
 import * as schema from './schema';
+import { DefaultLogger, LogWriter } from 'drizzle-orm';
 
 @Global()
 @Module({
@@ -21,13 +23,32 @@ import * as schema from './schema';
 
         const logger = new Logger('DB');
 
-        logger.debug('Connecting to Progresql...');
+        logger.debug('Connecting to Postgresql...');
 
-        const db = drizzle(sql, {
-          schema
+        class CustomWriter implements LogWriter {
+          write(message: string) {
+            if (dbConfig.env === 'dev') {
+              logger.debug(
+                '\n\n------------- [DATABASE DEBUG QUERY] ------------\n\n' +
+                  message +
+                  '\n\n---------------------------------------------------'
+              );
+            }
+          }
+        }
+
+        const dbLogger = new DefaultLogger({
+          writer: new CustomWriter()
         });
 
-        logger.debug('Connected to Progresql!');
+        const db = drizzle(sql, {
+          schema,
+          logger: dbLogger
+        });
+
+        await migrate(db, { migrationsFolder: 'drizzle' });
+
+        logger.debug('Connected to Postgresql!');
 
         return db;
       }

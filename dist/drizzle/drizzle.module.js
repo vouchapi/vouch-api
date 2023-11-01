@@ -10,10 +10,12 @@ Object.defineProperty(exports, "DrizzleModule", {
 });
 const _common = require("@nestjs/common");
 const _postgresjs = require("drizzle-orm/postgres-js");
+const _migrator = require("drizzle-orm/postgres-js/migrator");
 const _postgres = /*#__PURE__*/ _interop_require_default(require("postgres"));
 const _config = require("../config");
 const _constants = require("../constants");
 const _schema = /*#__PURE__*/ _interop_require_wildcard(require("./schema"));
+const _drizzleorm = require("drizzle-orm");
 function _interop_require_default(obj) {
     return obj && obj.__esModule ? obj : {
         default: obj
@@ -80,11 +82,25 @@ DrizzleModule = _ts_decorate([
                 useFactory: async (dbConfig)=>{
                     const sql = (0, _postgres.default)(dbConfig.env === 'dev' ? dbConfig.devBranchUrl : dbConfig.prodBranchUrl);
                     const logger = new _common.Logger('DB');
-                    logger.debug('Connecting to Progresql...');
-                    const db = (0, _postgresjs.drizzle)(sql, {
-                        schema: _schema
+                    logger.debug('Connecting to Postgresql...');
+                    let CustomWriter = class CustomWriter {
+                        write(message) {
+                            if (dbConfig.env === 'dev') {
+                                logger.debug('\n\n------------- [DATABASE DEBUG QUERY] ------------\n\n' + message + '\n\n---------------------------------------------------');
+                            }
+                        }
+                    };
+                    const dbLogger = new _drizzleorm.DefaultLogger({
+                        writer: new CustomWriter()
                     });
-                    logger.debug('Connected to Progresql!');
+                    const db = (0, _postgresjs.drizzle)(sql, {
+                        schema: _schema,
+                        logger: dbLogger
+                    });
+                    await (0, _migrator.migrate)(db, {
+                        migrationsFolder: 'drizzle'
+                    });
+                    logger.debug('Connected to Postgresql!');
                     return db;
                 }
             }

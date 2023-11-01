@@ -10,6 +10,7 @@ Object.defineProperty(exports, "AppController", {
 });
 const _common = require("@nestjs/common");
 const _licensecache = require("../../cache/license.cache");
+const _exception = require("../exception");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -43,10 +44,7 @@ let AppController = class AppController {
     }
     register(body) {
         if (!body || !body.key || !body.client) {
-            return new _common.HttpException('Invalid request', 400, {
-                cause: 'KEY_OR_client_MISSING',
-                description: 'Key or Client missing'
-            });
+            return new _exception.APIException('AUTH_HEADER_MISSING');
         }
         return this.licenseService.registerLicense(body.key, body.client);
     }

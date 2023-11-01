@@ -2,7 +2,6 @@ import {
   Body,
   Controller,
   Get,
-  HttpException,
   Param,
   Post,
   Query,
@@ -13,6 +12,7 @@ import { VouchActivity, profile, vouch } from '../../drizzle/schema';
 import { VouchService, VouchesFetchOptions } from '../../cache/vouch.cache';
 import { PgInsertValue } from 'drizzle-orm/pg-core';
 import { ClientAuthRequest } from '../../middleware/client.auth';
+import { APIException } from '../exception';
 
 @Controller('v1')
 export class Version1Controller {
@@ -30,10 +30,10 @@ export class Version1Controller {
   @Post('profiles/:id/register')
   registerProfile(@Param('id') id: string, @Body() body: { username: string }) {
     if (!id) {
-      return new HttpException('id is required', 400);
+      return new APIException('MISSING_PROFILE_ID');
     }
     if (!body || !body.username) {
-      return new HttpException('username is required', 400);
+      return new APIException('MISSING_PROFILE_USERNAME');
     }
     return this.profileService.registerProfile(
       [
@@ -52,21 +52,18 @@ export class Version1Controller {
     @Body() body: { username: string } & Partial<typeof profile.$inferSelect>
   ) {
     if (!id) {
-      return new HttpException('id is required', 400);
+      return new APIException('MISSING_PROFILE_ID');
     }
     if (!body || !body.username) {
-      return new HttpException('username is required', 400);
+      return new APIException('MISSING_PROFILE_USERNAME');
     }
 
     if (body.id) {
-      return new HttpException('id cannot be updated', 400);
+      delete body.id;
     }
 
     if (body.userId) {
-      return new HttpException(
-        'userId cannot be updated. user /transfer to transfer ownership',
-        400
-      );
+      return new APIException('UPDATE_PROFILE_USER_ID_NOT_ALLOWED');
     }
 
     return this.profileService.updateProfile(id, body.username, body, true);
@@ -80,14 +77,14 @@ export class Version1Controller {
   @Post('profiles/:id/vouches')
   postVouch(
     @Param('id') id: string,
-    @Body() body: PgInsertValue<typeof vouch>,
+    @Body() body: PgInsertValue<typeof vouch> & { client?: string },
     @Request() req: ClientAuthRequest
   ) {
     if (!id) {
-      return new HttpException('id is required', 400);
+      return new APIException('MISSING_PROFILE_ID');
     }
     if (!body) {
-      return new HttpException('vouch body is required', 400);
+      return new APIException('MISSING_VOUCH_DETAILS');
     }
 
     if (!body.client) {
@@ -114,7 +111,7 @@ export class Version1Controller {
     @Request() req: ClientAuthRequest
   ) {
     if (!body) {
-      return new HttpException('Invalid body', 400);
+      return new APIException('INVALID_VOUCH_ACTIVITY_BODY');
     }
 
     if (!body.vouchId) body.vouchId = parseInt(vouchId);
@@ -132,7 +129,7 @@ export class Version1Controller {
     @Request() req: ClientAuthRequest
   ) {
     if (!body) {
-      return new HttpException('Invalid body', 400);
+      return new APIException('INVALID_VOUCH_ACTIVITY_BODY');
     }
     if (!body.vouchId) body.vouchId = parseInt(vouchId);
     if (!body.client) {
@@ -150,12 +147,12 @@ export class Version1Controller {
     @Request() req: ClientAuthRequest
   ) {
     if (!body) {
-      return new HttpException('Invalid body', 400);
+      return new APIException('INVALID_VOUCH_ACTIVITY_BODY');
     }
     if (!body.vouchId) body.vouchId = parseInt(vouchId);
 
     if (!['RECEIVER', 'VOUCHER'].includes(who)) {
-      return new HttpException('Invalid who', 400);
+      return new APIException('INVALID_VOUCH_PROOF_ACTIVITY_BODY');
     }
 
     if (!body.client) {
@@ -172,7 +169,7 @@ export class Version1Controller {
     @Request() req: ClientAuthRequest
   ) {
     if (!body) {
-      return new HttpException('Invalid body', 400);
+      return new APIException('MISSING_VOUCH_DETAILS');
     }
 
     if (!body.client) {

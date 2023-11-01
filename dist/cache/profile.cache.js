@@ -9,12 +9,12 @@ Object.defineProperty(exports, "ProfileService", {
     }
 });
 const _common = require("@nestjs/common");
+const _eventemitter = require("@nestjs/event-emitter");
 const _discord = require("discord.js");
 const _drizzleorm = require("drizzle-orm");
 const _constants = require("../constants");
 const _drizzlemodule = require("../drizzle/drizzle.module");
 const _schema = require("../drizzle/schema");
-const _eventemitter = require("@nestjs/event-emitter");
 const _events = require("../events/events");
 const _getTime = require("../utils/getTime");
 function _define_property(obj, key, value) {
@@ -112,9 +112,10 @@ let ProfileService = class ProfileService {
         }
     }
     async refreshHotLeaderboard() {
+        await new Promise((resolve)=>setTimeout(resolve, 1000 * 9));
         const starting = new Date();
         const allVouches = await this.db.select().from(_schema.vouch);
-        const allProfiles = await this.db.select().from(_schema.profile);
+        const allProfiles = this.cache.toJSON();
         const hot = allProfiles.map((profile)=>{
             const weeklyVouches = allVouches.filter((vouch)=>vouch.receiverId === profile.userId && vouch.createdAt.getTime() > (0, _getTime.getPreviousFridayDate)().getTime()).length;
             return {

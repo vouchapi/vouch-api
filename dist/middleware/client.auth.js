@@ -10,6 +10,7 @@ Object.defineProperty(exports, "ClientAuthMiddleware", {
 });
 const _common = require("@nestjs/common");
 const _licensecache = require("../cache/license.cache");
+const _exception = require("../api/exception");
 function _define_property(obj, key, value) {
     if (key in obj) {
         Object.defineProperty(obj, key, {
@@ -37,11 +38,11 @@ let ClientAuthMiddleware = class ClientAuthMiddleware {
         const key = req.headers['x-client-key'];
         const secret = req.headers['x-client-secret'];
         if (!key || !secret) {
-            throw new _common.HttpException('Unauthorized', 401);
+            throw new _exception.APIException('UNAUTHORIZED');
         }
         const { valid, client } = await this.licenseService.validateLicense(key, secret);
         if (!valid || !client) {
-            throw new _common.HttpException('Unauthorized', 401);
+            throw new _exception.APIException('UNAUTHORIZED');
         }
         req.client = client;
         next();

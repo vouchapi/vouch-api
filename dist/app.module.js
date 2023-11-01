@@ -21,6 +21,7 @@ const _drizzlemodule = require("./drizzle/drizzle.module");
 const _eventsmodule = require("./events/events.module");
 const _appauth = require("./middleware/app.auth");
 const _clientauth = require("./middleware/client.auth");
+const _tempservice = require("./temp.service");
 function _ts_decorate(decorators, target, key, desc) {
     var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
     if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
@@ -54,7 +55,8 @@ AppModule = _ts_decorate([
         providers: [
             _profilecache.ProfileService,
             _vouchcache.VouchService,
-            _licensecache.LicenseService
+            _licensecache.LicenseService,
+            _tempservice.TempService
         ]
     })
 ], AppModule);

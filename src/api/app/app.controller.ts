@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpException, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import { LicenseService } from '../../cache/license.cache';
+import { APIException } from '../exception';
 
 @Controller()
 export class AppController {
@@ -13,10 +14,7 @@ export class AppController {
   @Post('register')
   register(@Body() body: { key: string; client: string }) {
     if (!body || !body.key || !body.client) {
-      return new HttpException('Invalid request', 400, {
-        cause: 'KEY_OR_client_MISSING',
-        description: 'Key or Client missing'
-      });
+      return new APIException('AUTH_HEADER_MISSING');
     }
 
     return this.licenseService.registerLicense(body.key, body.client);

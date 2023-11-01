@@ -1,0 +1,501 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "id": "1a4b1c03-24bc-4031-9e93-30e432e3823b",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "tables": {
+    "license": {
+      "name": "license",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "client": {
+          "name": "client",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "secret": {
+          "name": "secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "notification": {
+      "name": "notification",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "NotificationType",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vouchId": {
+          "name": "vouchId",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client": {
+          "name": "client",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "read": {
+          "name": "read",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+    "notificationSettings": {
+      "name": "notificationSettings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vouchReceived": {
+          "name": "vouchReceived",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "vouchApproved": {
+          "name": "vouchApproved",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "vouchDenied": {
+          "name": "vouchDenied",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "vouchProofRequest": {
+          "name": "vouchProofRequest",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "notificationSettings_userId_Profile_userId_fk": {
+          "name": "notificationSettings_userId_Profile_userId_fk",
+          "tableFrom": "notificationSettings",
+          "tableTo": "Profile",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "userId"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "notificationSettings_userId_unique": {
+          "name": "notificationSettings_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "userId"
+          ]
+        }
+      }
+    },
+    "Profile": {
+      "name": "Profile",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customAvatar": {
+          "name": "customAvatar",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "Role",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USER'"
+        },
+        "profileStatus": {
+          "name": "profileStatus",
+          "type": "ProfileStatus",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'GOOD'"
+        },
+        "warning": {
+          "name": "warning",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "mark": {
+          "name": "mark",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "color": {
+          "name": "color",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shop": {
+          "name": "shop",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Set your shop'"
+        },
+        "forum": {
+          "name": "forum",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Set your forum'"
+        },
+        "products": {
+          "name": "products",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Set your products'"
+        },
+        "banner": {
+          "name": "banner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "''"
+        },
+        "positiveVouches": {
+          "name": "positiveVouches",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "importedVouches": {
+          "name": "importedVouches",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "latestComments": {
+          "name": "latestComments",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "badges": {
+          "name": "badges",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alternative": {
+          "name": "alternative",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        }
+      },
+      "indexes": {
+        "userId": {
+          "name": "userId",
+          "columns": [
+            "userId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "Profile_id_unique": {
+          "name": "Profile_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        },
+        "Profile_userId_unique": {
+          "name": "Profile_userId_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "userId"
+          ]
+        }
+      }
+    },
+    "Vouch": {
+      "name": "Vouch",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "vouchStatus": {
+          "name": "vouchStatus",
+          "type": "VouchStatus",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'UNCHECKED'"
+        },
+        "voucherId": {
+          "name": "voucherId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "voucherName": {
+          "name": "voucherName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiverId": {
+          "name": "receiverId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "receiverName": {
+          "name": "receiverName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "serverId": {
+          "name": "serverId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "serverName": {
+          "name": "serverName",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customData": {
+          "name": "customData",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deniedReason": {
+          "name": "deniedReason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activities": {
+          "name": "activities",
+          "type": "json[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "client": {
+          "name": "client",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {
+    "Badges": {
+      "name": "Badges",
+      "values": {
+        "SHINEX_ADMIN": "SHINEX_ADMIN",
+        "SHINEX_STAFF": "SHINEX_STAFF",
+        "APPEAL_STAFF": "APPEAL_STAFF",
+        "REPORT_STAFF": "REPORT_STAFF",
+        "MEMBER": "MEMBER",
+        "EARLYSUPPORTER": "EARLYSUPPORTER"
+      }
+    },
+    "NotificationType": {
+      "name": "NotificationType",
+      "values": {
+        "VOUCH.RECEIVED": "VOUCH.RECEIVED",
+        "VOUCH.APPROVED": "VOUCH.APPROVED",
+        "VOUCH.DENIED": "VOUCH.DENIED",
+        "VOUCH.PROOF_REQUEST": "VOUCH.PROOF_REQUEST"
+      }
+    },
+    "ProfileStatus": {
+      "name": "ProfileStatus",
+      "values": {
+        "DEAL_WITH_CAUTION": "DEAL_WITH_CAUTION",
+        "BLACKLISTED_AND_DEAL_WITH_CAUTION": "BLACKLISTED_AND_DEAL_WITH_CAUTION",
+        "SCAMMER": "SCAMMER",
+        "BLOCKED": "BLOCKED",
+        "BLACKLISTED": "BLACKLISTED",
+        "GOOD": "GOOD"
+      }
+    },
+    "Role": {
+      "name": "Role",
+      "values": {
+        "USER": "USER",
+        "REPORT_STAFF": "REPORT_STAFF",
+        "MODERATOR": "MODERATOR",
+        "ADMIN": "ADMIN",
+        "OWNER": "OWNER"
+      }
+    },
+    "VouchStatus": {
+      "name": "VouchStatus",
+      "values": {
+        "DENIED": "DENIED",
+        "DENIED_FOR_PROOF": "DENIED_FOR_PROOF",
+        "APPROVED": "APPROVED",
+        "APPROVED_WITH_PROOF": "APPROVED_WITH_PROOF",
+        "PENDING_PROOF_RECEIVER": "PENDING_PROOF_RECEIVER",
+        "PENDING_PROOF_VOUCHER": "PENDING_PROOF_VOUCHER",
+        "UNCHECKED": "UNCHECKED",
+        "DELETED": "DELETED"
+      }
+    }
+  },
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}

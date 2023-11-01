@@ -11,6 +11,7 @@ import { DrizzleModule } from './drizzle/drizzle.module';
 import { EventsModule } from './events/events.module';
 import { AppAuthMiddleware } from './middleware/app.auth';
 import { ClientAuthMiddleware } from './middleware/client.auth';
+import { TempService } from './temp.service';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { ClientAuthMiddleware } from './middleware/client.auth';
     EventsModule
   ],
   controllers: [AppController, Version1Controller],
-  providers: [ProfileService, VouchService, LicenseService]
+  providers: [ProfileService, VouchService, LicenseService, TempService]
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

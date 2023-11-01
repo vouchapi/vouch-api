@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { HttpException, Inject, Logger, OnModuleInit } from '@nestjs/common';
+import {
+  HttpException,
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleInit
+} from '@nestjs/common';
 import { Collection } from 'discord.js';
 import { eq } from 'drizzle-orm';
 import { PgInsertValue } from 'drizzle-orm/pg-core';
@@ -9,16 +15,19 @@ import { VouchActivity, profile, vouch } from '../drizzle/schema';
 import { ProfileService } from './profile.cache';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Events, VouchCreatedEvent, VouchUpdatedEvent } from '../events/events';
+import { APIException } from '../api/exception';
 
 export interface VouchesFetchOptions {
-  vouchId?: string;
+  vouchIds?: string;
   status?: string;
   receiverId?: string;
+  profileId?: string;
   senderId?: string;
   limit?: string;
   sortBy?: string;
 }
 
+@Injectable()
 export class VouchService implements OnModuleInit {
   private cache = new Collection<number, typeof vouch.$inferSelect>();
   private logger = new Logger(VouchService.name);
@@ -82,36 +91,33 @@ export class VouchService implements OnModuleInit {
     instant = false
   ) {
     const current = this.cache.get(id);
-    if (!current) return new HttpException('Vouch not found', 404);
+    if (!current) return new APIException('VOUCH_NOT_FOUND');
 
     const merged = this.mergeAndValidate(current, vouchData);
-    if (merged instanceof HttpException) {
+    if (merged instanceof APIException || merged instanceof HttpException) {
       return merged;
     }
 
     if (vouchData.vouchStatus === current.vouchStatus) {
       return new HttpException(
         'Vouch is already ' + vouchData.vouchStatus,
-        400
+        502
       );
     }
 
     if (vouchData.vouchStatus === 'UNCHECKED') {
-      return new HttpException('Vouch status cannot be UNCHECKED', 400);
+      return new APIException('VOUCH_STATUS_CANNOT_BE_UNCHECKED');
     }
 
     if (current.vouchStatus === 'APPROVED' && merged.vouchStatus === 'DENIED') {
-      return new HttpException('Vouch already approved cannot be denied', 400);
+      return new APIException('VOUCH_APPROVED_CANNOT_BE_DENIED');
     }
     if (
       current.vouchStatus === 'APPROVED' &&
       (merged.vouchStatus === 'PENDING_PROOF_RECEIVER' ||
         merged.vouchStatus === 'PENDING_PROOF_VOUCHER')
     ) {
-      return new HttpException(
-        'Vouch already approved cannot be asked proof',
-        400
-      );
+      return new APIException('VOUCH_APPROVED_CANNOT_BE_ASKED_FOR_PROOF');
     }
 
     if (instant) {
@@ -123,15 +129,24 @@ export class VouchService implements OnModuleInit {
   }
 
   async dbPostVouch(
-    vouchData: PgInsertValue<typeof vouch>
-  ): Promise<typeof vouch.$inferSelect | HttpException> {
+    vouchData: PgInsertValue<typeof vouch> & { client?: string }
+  ): Promise<typeof vouch.$inferSelect | APIException> {
     const starting = new Date();
 
     const vouchDataValidated = this.validateVouch(vouchData);
 
-    if (vouchDataValidated instanceof HttpException) {
+    if (vouchDataValidated instanceof APIException) {
       return vouchDataValidated;
     }
+
+    if (vouchDataValidated.id) {
+      delete vouchDataValidated.id;
+    }
+
+    console.log(
+      '🚀 ~ file: vouch.cache.ts:135 ~ VouchService ~ vouchDataValidated:',
+      vouchDataValidated
+    );
 
     const result = await this.db
       .insert(vouch)
@@ -163,12 +178,12 @@ export class VouchService implements OnModuleInit {
   }
 
   async postVouch(
-    vouchData: PgInsertValue<typeof vouch>,
+    vouchData: PgInsertValue<typeof vouch> & { client?: string },
     instant = true
-  ): Promise<typeof vouch.$inferSelect | HttpException> {
+  ): Promise<typeof vouch.$inferSelect | APIException> {
     const vouchDataValidated = this.validateVouch(vouchData);
 
-    if (vouchDataValidated instanceof HttpException) {
+    if (vouchDataValidated instanceof APIException) {
       return vouchDataValidated;
     }
 
@@ -187,8 +202,8 @@ export class VouchService implements OnModuleInit {
   }
 
   validateVouch(
-    vouchData: PgInsertValue<typeof vouch>
-  ): typeof vouchData | HttpException {
+    vouchData: PgInsertValue<typeof vouch> & { client?: string }
+  ): typeof vouchData | APIException {
     const requiredKeys = Object.entries(vouch).filter(([, value]) => {
       return value && value.notNull && !value.hasDefault;
     });
@@ -200,7 +215,7 @@ export class VouchService implements OnModuleInit {
     if (missingKeys.length > 0) {
       return new HttpException(
         'Missing required keys: ' + missingKeys.map(([key]) => key).join(', '),
-        400
+        502
       );
     }
 
@@ -218,7 +233,7 @@ export class VouchService implements OnModuleInit {
           invalidKeysData
             .map(([key, value]) => key + ' should be ' + value.type)
             .join(', '),
-        400
+        502
       );
     }
 
@@ -234,16 +249,21 @@ export class VouchService implements OnModuleInit {
   getVouches(query?: VouchesFetchOptions): (typeof vouch.$inferSelect)[] {
     let vouches = this.cache.toJSON();
     if (query) {
-      if (typeof query.vouchId === 'string') {
-        const vouchIds = query.vouchId.split(',');
+      if (typeof query.vouchIds === 'string') {
+        const vouchIds = query.vouchIds.split(',');
         vouches = vouches.filter((vouch) => vouchIds.includes(vouch.id + ''));
       }
       if (typeof query.status === 'string') {
         vouches = vouches.filter((vouch) => vouch.vouchStatus === query.status);
       }
-      if (typeof query.receiverId === 'string') {
+      if (
+        typeof query.receiverId === 'string' ||
+        typeof query.profileId === 'string'
+      ) {
         vouches = vouches.filter(
-          (vouch) => vouch.receiverId === query.receiverId
+          (vouch) =>
+            vouch.receiverId === query.receiverId ||
+            vouch.receiverId === query.profileId
         );
       }
       if (typeof query.senderId === 'string') {
@@ -264,6 +284,7 @@ export class VouchService implements OnModuleInit {
         vouches = vouches.slice(0, parseInt(query.limit));
       }
     }
+
     return vouches;
   }
 
@@ -279,7 +300,7 @@ export class VouchService implements OnModuleInit {
       client
     });
 
-    if (validate instanceof HttpException) {
+    if (validate instanceof APIException) {
       return validate;
     }
 
@@ -302,7 +323,7 @@ export class VouchService implements OnModuleInit {
       true
     );
 
-    if (vouch instanceof HttpException) {
+    if (vouch instanceof APIException || vouch instanceof HttpException) {
       return vouch;
     }
 
@@ -344,7 +365,7 @@ export class VouchService implements OnModuleInit {
       client
     });
 
-    if (validate instanceof HttpException) {
+    if (validate instanceof APIException) {
       return validate;
     }
 
@@ -389,7 +410,7 @@ export class VouchService implements OnModuleInit {
       true
     );
 
-    if (validate instanceof HttpException) {
+    if (validate instanceof APIException) {
       return validate;
     }
 
@@ -447,7 +468,7 @@ export class VouchService implements OnModuleInit {
     if (missingKeys.length > 0) {
       return new HttpException(
         'Missing required keys: ' + missingKeys.map(([key]) => key).join(', '),
-        400
+        502
       );
     }
 
@@ -465,7 +486,7 @@ export class VouchService implements OnModuleInit {
           invalidKeysData
             .map(([key, value]) => key + ' should be ' + value.type)
             .join(', '),
-        400
+        502
       );
     }
 
@@ -489,7 +510,7 @@ export class VouchService implements OnModuleInit {
     if (missingKeys.length > 0) {
       return new HttpException(
         'Missing required keys: ' + missingKeys.join(', '),
-        400
+        502
       );
     }
 
@@ -512,7 +533,7 @@ export class VouchService implements OnModuleInit {
           invalidKeysData
             .map(([key, value]) => key + ' should be ' + value)
             .join(', '),
-        400
+        502
       );
     }
 
